@@ -5,10 +5,28 @@ import streamlit as st
 
 DOSSIER = Path(__file__).parent / "donnees"
 
-st.set_page_config(page_title="L'électricité dans 12 quartiers", page_icon="⚡", layout="wide")
+st.set_page_config(
+    page_title="L'électricité dans 12 quartiers",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
-st.title("L'électricité dans 12 quartiers")
-st.caption("Relevés mensuels de janvier 2024 à décembre 2025. Données fictives.")
+# Injection du style personnalisé
+_CSS = (Path(__file__).parent / "style.css").read_text(encoding="utf-8")
+st.markdown(f"<style>{_CSS}</style>", unsafe_allow_html=True)
+
+st.markdown(
+    """
+    <div class="hero">
+        <div class="eyebrow">Tableau de bord · Énergie</div>
+        <h1>L'électricité dans 12 quartiers</h1>
+        <p class="subtitle">Relevés mensuels de janvier 2024 à décembre 2025 · Données fictives</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 
 
 @st.cache_data
@@ -31,6 +49,7 @@ st.markdown(
 )
 
 st.sidebar.header("Filtres")
+st.sidebar.markdown("Affinez l'affichage par commune et par année.")
 communes_choisies = st.sidebar.multiselect(
     "Communes",
     options=communes,
@@ -69,6 +88,11 @@ else:
 
     with onglets[0]:
         st.subheader("Quels quartiers consomment le plus par abonné ?")
+        st.markdown(
+            '<p class="tab-intro">Consommation mensuelle moyenne par abonné, '
+            "selon le type de quartier.</p>",
+            unsafe_allow_html=True,
+        )
         par_quartier = (
             selection[selection["annee"] == annee_choisie]
             .groupby(["quartier", "type"], as_index=False)["kwh_par_abonne"]
@@ -84,6 +108,10 @@ else:
 
     with onglets[1]:
         st.subheader("Comment la consommation évolue-t-elle par commune ?")
+        st.markdown(
+            '<p class="tab-intro">Évolution mensuelle de la consommation par abonné.</p>',
+            unsafe_allow_html=True,
+        )
         evolution = (
             selection[selection["annee"] == annee_choisie]
             .groupby(["mois", "commune"], as_index=False)
@@ -104,6 +132,10 @@ else:
 
     with onglets[2]:
         st.subheader("La consommation suit-elle la chaleur ou les heures de courant ?")
+        st.markdown(
+            '<p class="tab-intro">Nuage de points pour les quartiers résidentiels.</p>',
+            unsafe_allow_html=True,
+        )
         residentiel = selection[
             selection["type"].str.startswith("R")
         ]
@@ -125,6 +157,10 @@ else:
 
     with onglets[3]:
         st.subheader("Où les coupures sont-elles les plus longues ?")
+        st.markdown(
+            '<p class="tab-intro">Médiane et quartiles des heures de courant par commune.</p>',
+            unsafe_allow_html=True,
+        )
         heures = (
             selection.groupby("commune")["heures_courant"]
             .agg(médiane="median", Q1=lambda valeurs: valeurs.quantile(0.25), Q3=lambda valeurs: valeurs.quantile(0.75))
@@ -141,22 +177,34 @@ else:
 
     with onglets[4]:
         st.subheader("Quels relevés sortent du lot ?")
+        st.markdown(
+            '<p class="tab-intro">Les trois plus grosses consommations du fichier.</p>',
+            unsafe_allow_html=True,
+        )
         remarquables = selection.nlargest(3, "kwh")[
             ["mois", "quartier", "type", "kwh"]
         ]
         st.bar_chart(remarquables, x="quartier", y="kwh", color="type")
-        st.dataframe(remarquables, hide_index=True)
+        st.dataframe(remarquables, hide_index=True, use_container_width=True)
 
     st.markdown(
         """
-        ### Conclusion
-
-        Dans les quartiers résidentiels, la consommation par abonné est davantage
-        associée aux heures de courant (corrélation de 0,76) qu'à la température
-        (−0,15). Cette association ne prouve pas que les heures de courant causent
-        à elles seules la consommation : une corrélation ne démontre pas la causalité.
-        """
+        <div class="conclusion-card">
+            <h3>Conclusion</h3>
+            <p>Dans les quartiers résidentiels, la consommation par abonné est davantage
+            associée aux heures de courant (corrélation de 0,76) qu'à la température
+            (−0,15). Cette association ne prouve pas que les heures de courant causent
+            à elles seules la consommation : une corrélation ne démontre pas la causalité.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
     with st.expander("Afficher les données filtrées"):
-        st.dataframe(filtrees, hide_index=True)
+        st.dataframe(filtrees, hide_index=True, use_container_width=True)
+st.markdown(
+    '<div class="footer">Données nettoyées dans <code>exploration.ipynb</code> · '
+    "Tableau de bord Streamlit</div>",
+    unsafe_allow_html=True,
+)
+
